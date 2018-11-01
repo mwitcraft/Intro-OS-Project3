@@ -30,6 +30,11 @@ int main(int argc, char** argv){
           // TODO: add error check
         }
       }
-      
+      if(i <= N_INODE_BLOCKS){
+        for(int j = 0; j < INODES_PER_BLOCK; ++j){
+          INODE inode;
+        }
+      }
+
     }
 }
