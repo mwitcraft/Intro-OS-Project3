@@ -16,45 +16,30 @@ int main(int argc, char** argv){
     if(vdisk_disk_open("vdisk1") != 0)
       return -1;
 
-    for(int num_block = 0; num_block < 128; ++num_block){
+    // Steps through all bytes in disk and sets to 0
+    for(int num_block = 0; num_block < N_BLOCKS_IN_DISK; ++num_block){ //Steps through each block
       BLOCK block;
-      for(int byte = 0; byte < BLOCK_SIZE; ++byte){
-        block.data.data[byte] = 0;
+      for(int byte = 0; byte < BLOCK_SIZE; ++byte){ //Steps through each byte in the block
+        block.data.data[byte] = 0; //Sets the byte to 0
       }
-      if(vdisk_write_block(num_block, &block) != 0){
-        printf("ERROR: 25");
+      if(vdisk_write_block(num_block, &block) != 0){ //Writes the block to the disk
+        //TODO: add error checks
       }
     }
 
-    // //Step through all blocks in virtual disk
-    // for(int i = 0; i < 128; ++i){
-    //   BLOCK block;
-    //   // Master block
-    //   if(i == 0){
-    //     // Steps through each byte in the block and sets it to 0
-    //     for(int j = 0; j < 8; ++j){
-    //       block.master.inode_allocated_flag[j] = 0;
-    //       block.master.block_allocated_flag[j] = 0;
-    //     }
-    //     // Writes the block to the virtual disk
-    //     if(vdisk_write_block(0, &block) != 0){
-    //       // TODO: add error check
-    //     }
-    //   }
-    //   if(i <= N_INODE_BLOCKS){
-    //     for(int j = 0; j < INODES_PER_BLOCK; ++j){
-    //       INODE inode;
-    //       inode.type = IT_NONE;
-    //       inode.n_references = 0;
-    //       inode.data[0] = UNALLOCATED_BLOCK;
-    //       inode.data[1] = 44;
-    //       inode.size = 0;
-    //       block.inodes.inode[j] = inode;
-    //     }
-    //     if(vdisk_write_block(i, &block) != 0){
-    //       printf("ERROR: 44\n");
-    //     }
-    //   }
-    //
-    // }
+    // int x = 15;
+    // unsigned char c;
+    // c = (unsigned char)x;
+    // printf("%x\n", c);
+
+    //Mark master block as allocated (master block is at 0)
+    BLOCK masterBlock;
+    for(int i = 0; i <= N_INODE_BLOCKS + 1; ++i){
+      //https://stackoverflow.com/questions/6848617/memory-efficient-flag-array-in-c
+      masterBlock.master.block_allocated_flag[i/8] |= (1 << (i % 8));
+    }
+     if(vdisk_write_block(0, &masterBlock) != 0){ //Writes the block to the disk
+       printf("ERROR\n");
+       //TODO: add error checks
+       }
 }
