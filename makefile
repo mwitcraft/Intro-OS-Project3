@@ -6,3 +6,6 @@ inspect:
 	gcc zinspect.c oufs_lib_support.c vdisk.c -o zinspect
 mkdir:
 	gcc zmkdir.c oufs_lib_support.c vdisk.c -o zmkdir 
+rmdir:
+	gcc zrmdir.c oufs_lib_support.c vdisk.c -o zrmdir 
+	

@@ -23,6 +23,7 @@ int main(int argc, char** argv) {
 
     // Make the specified directory
     oufs_mkdir(cwd, argv[1]);
+    // verify_parent_exists(argv[2]);
 
     // Clean up
     vdisk_disk_close();

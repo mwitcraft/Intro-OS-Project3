@@ -52,6 +52,28 @@ int main(int argc, char** argv) {
       }else{
 	fprintf(stderr, "Unknown argument (-inode %s)\n", argv[2]);
       }
+    }else if(strncmp(argv[1], "-inodee", 8) == 0) {
+      // Extended Inode query
+      int index;
+      if(sscanf(argv[2], "%d", &index) == 1){
+	if(index < 0 || index >= N_INODES) {
+	  fprintf(stderr, "Inode index out of range (%s)\n", argv[2]);
+	}else{
+	  INODE inode;
+	  oufs_read_inode_by_reference(index, &inode);
+
+	  printf("Inode: %d\n", index);
+	  printf("Type: %c\n", inode.type);
+	  printf("N references: %d\n", inode.n_references);
+	  for(int i = 0; i < BLOCKS_PER_INODE; ++i) {
+	    printf("Block %d: %d\n", i, inode.data[i]);
+	  }
+	  printf("Size: %d\n", inode.size);
+	  
+	}
+      }else{
+	fprintf(stderr, "Unknown argument (-inode %s)\n", argv[2]);
+      }
     }else if(strncmp(argv[1], "-dblock", 8) == 0) {
       // Inspect directory block
       int index;
