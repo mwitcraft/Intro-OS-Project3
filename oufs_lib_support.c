@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <libgen.h>
 #include "oufs_lib.h"
 
 #define debug 0
@@ -209,8 +210,37 @@ int oufs_mkdir(char* cwd, char* path){
     // Create a new inode in next available slot with type directory, first data slot pointing to new block
     //    and size of 2
 
+  char dirnamePath[strlen(path)];
+  strncpy(dirnamePath, path, strlen(path));
+  dirnamePath[strlen(path)] = '\0';
+  strncpy(dirnamePath, dirname(dirnamePath), strlen(dirnamePath));
+  dirnamePath[strlen(dirnamePath)] = '\0';
+  // dirname(dirnamePath);
+
+  char basenamePath[strlen(path)];
+  strncpy(basenamePath, path, strlen(path));
+  basenamePath[strlen(path)] = '\0';
+  strncpy(basenamePath, basename(basenamePath), strlen(basenamePath));
+  basenamePath[strlen(basename(basenamePath))] = '\0';
+  // basename(basenamePath);
+  // char str[strlen(basename(basenamePath))];
+  // strncpy(str, basename(basenamePath), strlen(basename(basenamePath)));
+  // str[strlen(basenamePath)] = '\0';
+
+  // printf("dirname of %s: %s\n", path, dirnamePath);
+  // printf("basename of %s: %s\n", path, basenamePath);
+  // printf("str: %s\n", str);
+  // int ref = verify_parent_exists(dirnamePath);
+  // printf("INODE REF OF PARENT: %i\n", ref);
+  // return 0;
+  int parentInodeReference = verify_parent_exists(dirnamePath);
+  printf("parentInodeReference: %i\n", parentInodeReference);
+  if(parentInodeReference == -1){
+    return -1;
+  }
 
   //Assume cwd = '/'
+  //Below gets the location of the next open INODE
   INODE_REFERENCE newInodeInodeReference = -1;
   for(int i = 0; i < N_INODES; ++i){
     INODE inode;
@@ -221,29 +251,33 @@ int oufs_mkdir(char* cwd, char* path){
     }
   }
 
+  //Gets the byte and bit of the new location so can assign values later
   int byte = newInodeInodeReference / INODES_PER_BLOCK + 1;
   int bit = newInodeInodeReference % INODES_PER_BLOCK;
 
+  //Byte corresponds to the BLOCK_REFERENCE
   BLOCK_REFERENCE newInodeInodeBlockReference = byte;
+  //Allocates a new block for this information and returns the location of that block
   BLOCK_REFERENCE newInodeDataBlockReference = oufs_allocate_new_block();
 
+  //Opens a new block at the location referenced above
   BLOCK newInodeBlock;
   vdisk_read_block(newInodeInodeBlockReference, &newInodeBlock);
 
+  //Fills in the inode information in the new block
   newInodeBlock.inodes.inode[bit].type = IT_DIRECTORY;
   newInodeBlock.inodes.inode[bit].n_references = 1;
   newInodeBlock.inodes.inode[bit].data[0] = newInodeDataBlockReference;
   for(int i = 1; i < BLOCKS_PER_INODE; ++i){
       newInodeBlock.inodes.inode[bit].data[i] = UNALLOCATED_BLOCK;
   }
+  newInodeBlock.inodes.inode[bit].size = 2;
 
   BLOCK parentBlockReference;
   vdisk_read_block(9, &parentBlockReference);
 
   for(int i = 0; i < DIRECTORY_ENTRIES_PER_BLOCK; ++i){
     if(parentBlockReference.directory.entry[i].inode_reference == UNALLOCATED_INODE){
-      // parentBlockReference.directory.entry[i].name = path;
-      // strcat(parentBlockReference.directory.entry[i].name, path);
       strncpy(parentBlockReference.directory.entry[i].name, path, strlen(path));
       parentBlockReference.directory.entry[i].inode_reference = newInodeInodeReference;
       break;
@@ -370,9 +404,11 @@ int verify_parent_exists(char* path){
     char* token;
     token = strtok(path, "/");
     INODE_REFERENCE ref = 0;
+    int parentExists = -1;
+    printf("token: %s\n", token);
     while(token != NULL){
-      int parentExists = 0;
-      printf("Token: %s\n", token);
+      parentExists = -1;
+      // printf("Token: %s\n", token);
       INODE inode;
       oufs_read_inode_by_reference(ref, &inode);
       for(int i = 0; i < BLOCKS_PER_INODE; ++i){
@@ -382,21 +418,19 @@ int verify_parent_exists(char* path){
           vdisk_read_block(currentBlockRef, &dirBlock);
           for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
             if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
+              // printf("Does %s == %s\n", dirBlock.directory.entry[j].name, token);
               if(!strncmp(dirBlock.directory.entry[j].name, token, strlen(token))){
-                  printf("Parent Exists\n");
-                  parentExists = 1;
+                  // printf("HERE\n");
+                  parentExists = dirBlock.directory.entry[j].inode_reference;
+                  // printf("ParentExists: %i\n", parentExists);
               }
-              printf("%s\n", dirBlock.directory.entry[j].name);
+              // printf("%s\n", dirBlock.directory.entry[j].name);
             }
           }
         }
       }
-      if(!parentExists){
-        fprintf(stderr, "ERROR: Parent Does Not Exist\n");
-        return -1;
-      }
       token = strtok(NULL, "/");
     }
 
-    return 0;
+    return parentExists;
 }
