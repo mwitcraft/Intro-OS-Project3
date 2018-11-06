@@ -243,7 +243,8 @@ int oufs_mkdir(char* cwd, char* path){
   for(int i = 0; i < DIRECTORY_ENTRIES_PER_BLOCK; ++i){
     if(parentBlockReference.directory.entry[i].inode_reference == UNALLOCATED_INODE){
       // parentBlockReference.directory.entry[i].name = path;
-      strcat(parentBlockReference.directory.entry[i].name, path);
+      // strcat(parentBlockReference.directory.entry[i].name, path);
+      strncpy(parentBlockReference.directory.entry[i].name, path, strlen(path));
       parentBlockReference.directory.entry[i].inode_reference = newInodeInodeReference;
       break;
     }
@@ -363,4 +364,39 @@ int oufs_mkdir(char* cwd, char* path){
 
 
   return 0;
+}
+
+int verify_parent_exists(char* path){
+    char* token;
+    token = strtok(path, "/");
+    INODE_REFERENCE ref = 0;
+    while(token != NULL){
+      int parentExists = 0;
+      printf("Token: %s\n", token);
+      INODE inode;
+      oufs_read_inode_by_reference(ref, &inode);
+      for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+        if(inode.data[i] != UNALLOCATED_BLOCK){
+          BLOCK_REFERENCE currentBlockRef = inode.data[i];
+          BLOCK dirBlock;
+          vdisk_read_block(currentBlockRef, &dirBlock);
+          for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+            if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
+              if(!strncmp(dirBlock.directory.entry[j].name, token, strlen(token))){
+                  printf("Parent Exists\n");
+                  parentExists = 1;
+              }
+              printf("%s\n", dirBlock.directory.entry[j].name);
+            }
+          }
+        }
+      }
+      if(!parentExists){
+        fprintf(stderr, "ERROR: Parent Does Not Exist\n");
+        return -1;
+      }
+      token = strtok(NULL, "/");
+    }
+
+    return 0;
 }
