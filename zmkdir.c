@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 
     // Clean up
     vdisk_disk_close();
-    
+
   }else{
     // Wrong number of parameters
     fprintf(stderr, "Usage: zmkdir <dirname>\n");

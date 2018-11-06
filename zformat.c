@@ -37,6 +37,9 @@ int main(int argc, char** argv){
   if(initialize_first_directory() == -1){
     fprintf(stderr, "ERROR CREATING FIRST DATA BLOCK");
   }
+
+  putenv("ZPWD=/");
+  putenv("ZDISK=vdisk1");
 }
 
 int initialize_disk(){

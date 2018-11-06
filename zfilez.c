@@ -39,45 +39,6 @@ int main(int argc, char** argv){
         }
       }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // //If path == '/' (is root)
-    // if(!strcmp(path, "/")){
-    //   //  Go to inode 0 (block 1)
-    //   INODE* inode = NULL; //Stores root inode
-    //   oufs_read_inode_by_reference(0, inode);
-    //   //  Find first data entry and open that block
-    //   for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-    //     BLOCK* block = NULL; //Pointer to store block pointed to from inode
-    //     if(inode->data[i] != UNALLOCATED_BLOCK){ //If the block pointed to from inode->data[i] exists
-    //       vdisk_read_block(inode->data[i], block); // Store it in block
-    //       for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){ // Step through the entries in block
-    //           if(block->directory.entry[i].inode_reference != UNALLOCATED_INODE){ //If the entry points to a valid inode
-    //             //  Print out the names in the directory block's entries field
-    //             printf("%s\n" , block->directory.entry[j].name);
-    //           }
-    //       }
-    //     }
-    //   }
-    // }
-
   }
 
   vdisk_disk_close();
