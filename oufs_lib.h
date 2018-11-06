@@ -24,6 +24,9 @@ BLOCK_REFERENCE oufs_allocate_new_block();
 // Helper functions to be provided
 int oufs_find_open_bit(unsigned char value);
 
+// My own added functions
+int verify_parent_exists(char* path);
+
 // PROJECT 4 ONLY
 OUFILE* oufs_fopen(char *cwd, char *path, char *mode);
 void oufs_fclose(OUFILE *fp);
