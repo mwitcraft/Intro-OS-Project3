@@ -13,23 +13,39 @@ int main(int argc, char** argv){
 
   vdisk_disk_open(diskName);
 
-  //If no arguments are provided, list cwd
+  INODE inode;
   if(argc == 1){
+    if(!strcmp(path, "/")){
+      oufs_read_inode_by_reference(0, &inode);
+    }
+  }
+  else if(argc == 2){
+    // printf("Here\n");
+    if(!strcmp(path, "/")){
+      // printf("R\n");
+      int inodeRef = verify_parent_exists(argv[1]);
+      // printf("Here\n");
+      if(inodeRef == -1){
+        fprintf(stderr, "Error: Directory does not exist\n");
+      } else {
+        oufs_read_inode_by_reference(inodeRef, &inode);
+        // printf("inodeRef: %i\n", inodeRef);
+      }
+    }
+  }
+
+  //If no arguments are provided, list cwd
     //Assume path is '/'
     //Go to inode 0 and store the inode
     //Step through data in inode
     //  If data[i] is NOT an UNALLOCATED_BLOCK, store that block
     //  Step through the entries in that block
     //    if entry[i] is NOT an UNALLOCATED_INODE, print the name of the entry
-
-
-    if(!strcmp(path, "/")){
-      INODE inode;
-      oufs_read_inode_by_reference(0, &inode);
+      // oufs_read_inode_by_reference(0, &inode);
       for(int i = 0; i < BLOCKS_PER_INODE; ++i){
         BLOCK block;
         if(inode.data[i] != UNALLOCATED_BLOCK){
-          printf("inode.data[%i]: %i\n", i, inode.data[i]);
+          // printf("inode.data[%i]: %i\n", i, inode.data[i]);
           vdisk_read_block(inode.data[i], &block);
           for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
             if(block.directory.entry[j].inode_reference != UNALLOCATED_INODE){
@@ -38,8 +54,6 @@ int main(int argc, char** argv){
           }
         }
       }
-    }
-  }
 
   vdisk_disk_close();
 
