@@ -238,6 +238,13 @@ int oufs_mkdir(char* cwd, char* path){
     return -1;
   }
 
+  int parentInodeBlockReference = parentInodeReference / INODES_PER_BLOCK + 1;
+  int parentInodeBlockIndex = parentInodeReference % INODES_PER_BLOCK;
+  BLOCK parentBlock;
+  vdisk_read_block(parentInodeBlockReference, &parentBlock);
+  ++parentBlock.inodes.inode[parentInodeBlockIndex].size;
+  vdisk_write_block(parentInodeBlockReference, &parentBlock);
+
   BLOCK_REFERENCE parentDataBlockReference;
   INODE parentInode;
   oufs_read_inode_by_reference(parentInodeReference, &parentInode);
@@ -249,6 +256,7 @@ int oufs_mkdir(char* cwd, char* path){
         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
           if(parentDataBlock.directory.entry[j].inode_reference == UNALLOCATED_INODE){
               parentDataBlockReference = parentDataBlockRef;
+              break;
           }
         }
       }
