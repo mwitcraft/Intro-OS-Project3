@@ -319,17 +319,107 @@ int oufs_mkdir(char* cwd, char* path){
 }
 
 int oufs_rmdir(char *cwd, char *path){
-    char pathArray[strlen(path)];
-    strncpy(pathArray, path, strlen(path));
-    pathArray[strlen(path)] = '\0';
 
-    int inodeReferenceToRemove = verify_parent_exists(pathArray);
+  char fullPath[strlen(cwd) + strlen(path)];
+  fullPath[0] = '\0';
+  strcat(fullPath, cwd);
+  strcat(fullPath, path);
 
-    BLOCK_REFERENCE inodeToRemoveBlockReference = inodeReferenceToRemove / INODES_PER_BLOCK + 1;
-    int inodeToRemoveIndex = inodeReferenceToRemove % INODES_PER_BLOCK;
+  int inodeToRemoveReference = verify_parent_exists(fullPath);
 
-    BLOCK block;
-    vdisk_read_block(inodeToRemoveBlockReference, &block);
+  if(inodeToRemoveReference == -1){
+    fprintf(stderr, "Path does not exist\n");
+  }
+  else{
+
+    INODE inodeToRemove;
+    oufs_read_inode_by_reference(inodeToRemoveReference, &inodeToRemove);
+
+    //TODO: add size check later
+
+    //Get parent inode reference
+    int parentInodeReference;
+    for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+      if(inodeToRemove.data[i] != UNALLOCATED_BLOCK){
+        int ref = inodeToRemove.data[i];
+        BLOCK block;
+        vdisk_read_block(ref, &block);
+        for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+          if(!strcmp(block.directory.entry[j].name, "..")){
+            parentInodeReference = block.directory.entry[j].inode_reference;
+          }
+        }
+      }
+    }
+
+    int parentInodeBlockReference = parentInodeReference / INODES_PER_BLOCK + 1;
+    int parentInodeBlockIndex = parentInodeReference % INODES_PER_BLOCK;
+
+    BLOCK parentBlock;
+    vdisk_read_block(parentInodeBlockReference, &parentBlock);
+
+
+    for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+      int ref = parentBlock.inodes.inode[parentInodeBlockIndex].data[i];
+      if(ref != UNALLOCATED_BLOCK){
+        BLOCK block;
+        vdisk_read_block(ref, &block);
+        for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+          int inodeRef = block.directory.entry[j].inode_reference;
+          if(inodeRef == inodeToRemoveReference){
+            // printf("name: %s\n", block.directory.entry[j].name);
+            strncpy(block.directory.entry[j].name, "", 1);
+            block.directory.entry[j].inode_reference = UNALLOCATED_INODE;
+            vdisk_write_block(ref, &block);
+            break;
+          }
+        }
+      }
+    }
+    --parentBlock.inodes.inode[parentInodeBlockIndex].size;
+    vdisk_write_block(parentInodeBlockReference, &parentBlock);
+    // for(int i = 0; i < DIRECTORY_ENTRIES_PER_BLOCK; ++i){
+    //   printf("entries: %s\n", parentBlock.directory.entry[i].name);
+    //   if(parentBlock.directory.entry[i].inode_reference == inodeToRemoveReference){
+    //     printf("Name to remove: %s\n", parentBlock.directory.entry[i].name);
+    //     strncpy(parentBlock.directory.entry[i].name, "", 1);
+    //     parentBlock.directory.entry[i].inode_reference = UNALLOCATED_INODE;
+    //     break;
+    //   }
+    // }
+
+    // printf("Path does exist\n");
+    // printf("inodeReference: %i\n", inodeReference);
+    int inodeBlockReference = inodeToRemoveReference / INODES_PER_BLOCK + 1;
+    int index = inodeToRemoveReference % INODES_PER_BLOCK;
+
+    BLOCK inodeBlock;
+    vdisk_read_block(inodeBlockReference, &inodeBlock);
+
+    inodeBlock.inodes.inode[index].type = 0;
+    inodeBlock.inodes.inode[index].n_references = 0;
+    for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+      inodeBlock.inodes.inode[index].data[i] = 0;
+    }
+    inodeBlock.inodes.inode[index].size = 0;
+
+    vdisk_write_block(inodeBlockReference, &inodeBlock);
+
+  }
+
+  return 0;
+
+
+
+
+
+  // int inodeReferenceToRemove = verify_parent_exists(pathArray);
+
+  // BLOCK_REFERENCE inodeToRemoveBlockReference = inodeReferenceToRemove / INODES_PER_BLOCK + 1;
+  // int inodeToRemoveIndex = inodeReferenceToRemove % INODES_PER_BLOCK;
+
+  BLOCK block;
+  // vdisk_read_block(inodeToRemoveBlockReference, &block);
 
 
 
@@ -342,12 +432,13 @@ int verify_parent_exists(char* path){
   //     return 0;
   //   }
 
-    INODE_REFERENCE currentParentInodeReference = 0;
+    int currentParentInodeReference = 0;
     char* token = strtok(path, "/");
     while(token != NULL){
-        int i = check_helper(currentParentInodeReference, token);
-        currentParentInodeReference = i;
-        printf("currentParentInodeReference: %i\n", currentParentInodeReference);
+        currentParentInodeReference = check_helper(currentParentInodeReference, token);
+        if(currentParentInodeReference == -1){
+          return -1;
+        }
         token = strtok(NULL, "/");
     }
     return currentParentInodeReference;
@@ -391,9 +482,9 @@ int verify_parent_exists(char* path){
 
 int check_helper(INODE_REFERENCE parentInodeReference, char* name){
 
-    if(!strcmp(name, "/")){
-      return 0;
-    }
+  if(!strcmp(name, "/")){
+    return 0;
+  }
 
   int returner = -1;
   INODE inode;
@@ -408,9 +499,6 @@ int check_helper(INODE_REFERENCE parentInodeReference, char* name){
           printf("does %s == %s\n", dirBlock.directory.entry[j].name, name);
           if(!strncmp(dirBlock.directory.entry[j].name, name, strlen(name))){
               returner = dirBlock.directory.entry[j].inode_reference;
-              //TODO: Need to work in here to make ref point to the next inode
-
-              // k = N_INODES;
           }
         }
       }
