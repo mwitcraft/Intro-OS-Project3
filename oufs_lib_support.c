@@ -336,43 +336,85 @@ int oufs_rmdir(char *cwd, char *path){
 }
 
 int verify_parent_exists(char* path){
-  printf("Path: %s\n", path);
-    if(!strcmp(path, "/")){
+  // printf("Path: %s\n", path);
+  //   if(!strcmp(path, "/")){
+  //
+  //     return 0;
+  //   }
+
+    INODE_REFERENCE currentParentInodeReference = 0;
+    char* token = strtok(path, "/");
+    while(token != NULL){
+        int i = check_helper(currentParentInodeReference, token);
+        currentParentInodeReference = i;
+        printf("currentParentInodeReference: %i\n", currentParentInodeReference);
+        token = strtok(NULL, "/");
+    }
+    return currentParentInodeReference;
+
+
+    // INODE_REFERENCE ref = 0;
+    // int parentExists = -1;
+    // char* token = strtok(path, "/");
+    // while(token != NULL){
+    // printf("token: %s\n", token);
+    //   parentExists = -1;
+    //   INODE inode;
+    //   // oufs_read_inode_by_reference(ref, &inode);
+    //   // for(int k = 0; k < N_INODES; ++k){
+    //     oufs_read_inode_by_reference(ref, &inode);
+    //     for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+    //       if(inode.data[i] != UNALLOCATED_BLOCK){
+    //         BLOCK_REFERENCE currentBlockRef = inode.data[i];
+    //         BLOCK dirBlock;
+    //         vdisk_read_block(currentBlockRef, &dirBlock);
+    //         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+    //           if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
+    //             printf("does %s == %s\n", dirBlock.directory.entry[j].name, token);
+    //             if(!strncmp(dirBlock.directory.entry[j].name, token, strlen(token))){
+    //                 parentExists = dirBlock.directory.entry[j].inode_reference;
+    //                 //TODO: Need to work in here to make ref point to the next inode
+    //
+    //                 // k = N_INODES;
+    //                 ++ref;
+    //             }
+    //           }
+    //         }
+    //       }
+    //     // }
+    //   }
+    //   token = strtok(NULL, "/");
+    // }
+    //
+    // return parentExists;
+}
+
+int check_helper(INODE_REFERENCE parentInodeReference, char* name){
+
+    if(!strcmp(name, "/")){
       return 0;
     }
 
+  int returner = -1;
+  INODE inode;
+  oufs_read_inode_by_reference(parentInodeReference, &inode);
+  for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+    if(inode.data[i] != UNALLOCATED_BLOCK){
+      BLOCK_REFERENCE currentBlockRef = inode.data[i];
+      BLOCK dirBlock;
+      vdisk_read_block(currentBlockRef, &dirBlock);
+      for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+        if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
+          printf("does %s == %s\n", dirBlock.directory.entry[j].name, name);
+          if(!strncmp(dirBlock.directory.entry[j].name, name, strlen(name))){
+              returner = dirBlock.directory.entry[j].inode_reference;
+              //TODO: Need to work in here to make ref point to the next inode
 
-    INODE_REFERENCE ref = 0;
-    int parentExists = -1;
-    char* token = strtok(path, "/");
-    while(token != NULL){
-    printf("token: %s\n", token);
-      parentExists = -1;
-      INODE inode;
-      // oufs_read_inode_by_reference(ref, &inode);
-      // for(int k = 0; k < N_INODES; ++k){
-        oufs_read_inode_by_reference(ref, &inode);
-        for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-          if(inode.data[i] != UNALLOCATED_BLOCK){
-            BLOCK_REFERENCE currentBlockRef = inode.data[i];
-            BLOCK dirBlock;
-            vdisk_read_block(currentBlockRef, &dirBlock);
-            for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
-              if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
-                printf("does %s == %s\n", dirBlock.directory.entry[j].name, token);
-                if(!strncmp(dirBlock.directory.entry[j].name, token, strlen(token))){
-                    parentExists = dirBlock.directory.entry[j].inode_reference;
-                    //TODO: Need to work in here to make ref point to the next inode
-                    // k = N_INODES;
-                    ++ref;
-                }
-              }
-            }
+              // k = N_INODES;
           }
-        // }
+        }
       }
-      token = strtok(NULL, "/");
     }
-
-    return parentExists;
+  }
+  return returner;
 }

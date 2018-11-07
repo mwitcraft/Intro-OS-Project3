@@ -26,6 +26,8 @@ int oufs_find_open_bit(unsigned char value);
 
 // My own added functions
 int verify_parent_exists(char* path);
+int check_helper(INODE_REFERENCE parentInodeReference, char* name);
+
 
 // PROJECT 4 ONLY
 OUFILE* oufs_fopen(char *cwd, char *path, char *mode);
