@@ -125,21 +125,6 @@ BLOCK_REFERENCE oufs_allocate_new_block()
   // Find the FIRST bit in the byte that is 0 (we scan in bit order: 0 ... 7)
   int block_bit = oufs_find_open_bit(block.master.block_allocated_flag[block_byte]);
 
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-
-  // printf("Byte: %i Bit: %i\n", block_byte, block_bit);
-  // return 0;
-
-
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-  //----------------------------------------------------------------
-
   // Now set the bit in the allocation table
   block.master.block_allocated_flag[block_byte] |= (1 << block_bit);
 
@@ -203,13 +188,6 @@ int oufs_find_open_bit(unsigned char value){
 
 int oufs_mkdir(char* cwd, char* path){
 
-  //if cwd == '/' (it is the root directory, or inode 0 (block 1)) and path does not contain a '/' (new folder in root)
-    // Create a new block in next available data block space, initialize with 2 entries, using oufs_clean_directory_block
-    //    Next available data block space is found from oufs_allocate_new_block
-    //    one for '.' and '..' with '.' pointing to own inode and '..' pointing to root inode
-    // Create a new inode in next available slot with type directory, first data slot pointing to new block
-    //    and size of 2
-
   char fullPath[strlen(cwd) + strlen(path)];
   fullPath[0] = '\0';
   strcat(fullPath, cwd);
@@ -220,7 +198,6 @@ int oufs_mkdir(char* cwd, char* path){
   dirnamePath[strlen(fullPath)] = '\0';
   strncpy(dirnamePath, dirname(dirnamePath), strlen(dirnamePath));
   dirnamePath[strlen(dirnamePath)] = '\0';
-  // dirname(dirnamePath);
 
   char basenamePath[strlen(fullPath)];
   strncpy(basenamePath, fullPath, strlen(fullPath));
@@ -228,12 +205,12 @@ int oufs_mkdir(char* cwd, char* path){
   strncpy(basenamePath, basename(basenamePath), strlen(basenamePath));
   basenamePath[strlen(basename(basenamePath))] = '\0';
 
-  printf("fullPath: %s\n", fullPath);
-  printf("dirnamePath: %s\n", dirnamePath);
-  printf("basenamePath: %s\n", basenamePath);
+  if(verify_parent_exists(fullPath) != -1){
+    fprintf(stderr, "ERROR: Directory already exists\n");
+    return -1;
+  }
 
   int parentInodeReference = verify_parent_exists(dirnamePath);
-  printf("parentInodeReference: %i\n", parentInodeReference);
   if(parentInodeReference == -1){
     return -1;
   }
@@ -262,10 +239,6 @@ int oufs_mkdir(char* cwd, char* path){
       }
   }
 
-  // return 0;
-
-  //Assume cwd = '/'
-  //Below gets the location of the next open INODE
   INODE_REFERENCE newInodeInodeReference = -1;
   for(int i = 0; i < N_INODES; ++i){
     INODE inode;
@@ -310,7 +283,6 @@ int oufs_mkdir(char* cwd, char* path){
   }
 
   BLOCK newInodeDataBlock;
-  //Self, parent, block
   oufs_clean_directory_block(newInodeInodeReference, parentInodeReference, &newInodeDataBlock);
 
   vdisk_write_block(newInodeInodeBlockReference, &newInodeBlock);
@@ -343,7 +315,11 @@ int oufs_rmdir(char *cwd, char *path){
     INODE inodeToRemove;
     oufs_read_inode_by_reference(inodeToRemoveReference, &inodeToRemove);
 
-    //TODO: add size check later
+
+    if(inodeToRemove.size > 2){
+      fprintf(stderr, "ERROR: Directory not empty\n");
+      return -1;
+    }
 
     //Get parent inode reference
     int parentInodeReference;
@@ -355,6 +331,13 @@ int oufs_rmdir(char *cwd, char *path){
         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
           if(!strcmp(block.directory.entry[j].name, "..")){
             parentInodeReference = block.directory.entry[j].inode_reference;
+
+            BLOCK masterBlock;
+            vdisk_read_block(MASTER_BLOCK_REFERENCE, &masterBlock);
+            masterBlock.master.block_allocated_flag[ref / 8] &= ~(1  << (ref % 8));
+            masterBlock.master.inode_allocated_flag[inodeToRemoveReference / 8] &= ~(1 << (inodeToRemoveReference % 8));
+            vdisk_write_block(MASTER_BLOCK_REFERENCE, &masterBlock);
+            break;
           }
         }
       }
@@ -366,7 +349,6 @@ int oufs_rmdir(char *cwd, char *path){
     BLOCK parentBlock;
     vdisk_read_block(parentInodeBlockReference, &parentBlock);
 
-
     for(int i = 0; i < BLOCKS_PER_INODE; ++i){
       int ref = parentBlock.inodes.inode[parentInodeBlockIndex].data[i];
       if(ref != UNALLOCATED_BLOCK){
@@ -375,29 +357,15 @@ int oufs_rmdir(char *cwd, char *path){
         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
           int inodeRef = block.directory.entry[j].inode_reference;
           if(inodeRef == inodeToRemoveReference){
-            // printf("name: %s\n", block.directory.entry[j].name);
             strncpy(block.directory.entry[j].name, "", 1);
             block.directory.entry[j].inode_reference = UNALLOCATED_INODE;
             vdisk_write_block(ref, &block);
-            break;
           }
         }
       }
     }
     --parentBlock.inodes.inode[parentInodeBlockIndex].size;
     vdisk_write_block(parentInodeBlockReference, &parentBlock);
-    // for(int i = 0; i < DIRECTORY_ENTRIES_PER_BLOCK; ++i){
-    //   printf("entries: %s\n", parentBlock.directory.entry[i].name);
-    //   if(parentBlock.directory.entry[i].inode_reference == inodeToRemoveReference){
-    //     printf("Name to remove: %s\n", parentBlock.directory.entry[i].name);
-    //     strncpy(parentBlock.directory.entry[i].name, "", 1);
-    //     parentBlock.directory.entry[i].inode_reference = UNALLOCATED_INODE;
-    //     break;
-    //   }
-    // }
-
-    // printf("Path does exist\n");
-    // printf("inodeReference: %i\n", inodeReference);
     int inodeBlockReference = inodeToRemoveReference / INODES_PER_BLOCK + 1;
     int index = inodeToRemoveReference % INODES_PER_BLOCK;
 
@@ -412,33 +380,53 @@ int oufs_rmdir(char *cwd, char *path){
     inodeBlock.inodes.inode[index].size = 0;
 
     vdisk_write_block(inodeBlockReference, &inodeBlock);
-
   }
 
   return 0;
+}
 
+int oufs_list(char *cwd, char *path){
+  char fullPath[strlen(cwd) + strlen(path)];
+  fullPath[0] = '\0';
+  strcat(fullPath, cwd);
+  strcat(fullPath, path);
 
+  INODE inode;
+  int inodeReference = verify_parent_exists(fullPath);
+  if(inodeReference == -1){
+    fprintf(stderr, "ERROR: Directory does not exist\n");
+    return -1;
+  }
+  else{
+    oufs_read_inode_by_reference(inodeReference, &inode);
+  }
 
+  char* dirNames[DIRECTORY_ENTRIES_PER_BLOCK];
+  int dirNamesSize = 0;
+      for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+        BLOCK block;
+        if(inode.data[i] != UNALLOCATED_BLOCK){
+          vdisk_read_block(inode.data[i], &block);
+          for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+            if(block.directory.entry[j].inode_reference != UNALLOCATED_INODE){
+              dirNames[j] = block.directory.entry[j].name;
+              ++dirNamesSize;
+            }
+          }
+        }
+      }
 
-
-  // int inodeReferenceToRemove = verify_parent_exists(pathArray);
-
-  // BLOCK_REFERENCE inodeToRemoveBlockReference = inodeReferenceToRemove / INODES_PER_BLOCK + 1;
-  // int inodeToRemoveIndex = inodeReferenceToRemove % INODES_PER_BLOCK;
-
-  BLOCK block;
-  // vdisk_read_block(inodeToRemoveBlockReference, &block);
-
-
-
+  qsort(dirNames, dirNamesSize, sizeof(char*), comparator);
+  for(int i = 0; i < dirNamesSize; ++i){
+    if(strcmp(dirNames[i], "")){
+      printf("%s/\n", dirNames[i]);
+      fflush(stdout);
+    }
+  }
+  return 0;
 }
 
 int verify_parent_exists(char* path){
-  // printf("Path: %s\n", path);
-  //   if(!strcmp(path, "/")){
-  //
-  //     return 0;
-  //   }
 
     int currentParentInodeReference = 0;
     char* token = strtok(path, "/");
@@ -450,42 +438,6 @@ int verify_parent_exists(char* path){
         token = strtok(NULL, "/");
     }
     return currentParentInodeReference;
-
-
-    // INODE_REFERENCE ref = 0;
-    // int parentExists = -1;
-    // char* token = strtok(path, "/");
-    // while(token != NULL){
-    // printf("token: %s\n", token);
-    //   parentExists = -1;
-    //   INODE inode;
-    //   // oufs_read_inode_by_reference(ref, &inode);
-    //   // for(int k = 0; k < N_INODES; ++k){
-    //     oufs_read_inode_by_reference(ref, &inode);
-    //     for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-    //       if(inode.data[i] != UNALLOCATED_BLOCK){
-    //         BLOCK_REFERENCE currentBlockRef = inode.data[i];
-    //         BLOCK dirBlock;
-    //         vdisk_read_block(currentBlockRef, &dirBlock);
-    //         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
-    //           if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
-    //             printf("does %s == %s\n", dirBlock.directory.entry[j].name, token);
-    //             if(!strncmp(dirBlock.directory.entry[j].name, token, strlen(token))){
-    //                 parentExists = dirBlock.directory.entry[j].inode_reference;
-    //                 //TODO: Need to work in here to make ref point to the next inode
-    //
-    //                 // k = N_INODES;
-    //                 ++ref;
-    //             }
-    //           }
-    //         }
-    //       }
-    //     // }
-    //   }
-    //   token = strtok(NULL, "/");
-    // }
-    //
-    // return parentExists;
 }
 
 int check_helper(INODE_REFERENCE parentInodeReference, char* name){
@@ -504,13 +456,20 @@ int check_helper(INODE_REFERENCE parentInodeReference, char* name){
       vdisk_read_block(currentBlockRef, &dirBlock);
       for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
         if(dirBlock.directory.entry[j].inode_reference != UNALLOCATED_INODE){
-          printf("does %s == %s\n", dirBlock.directory.entry[j].name, name);
           if(!strncmp(dirBlock.directory.entry[j].name, name, strlen(name))){
               returner = dirBlock.directory.entry[j].inode_reference;
+              break;
           }
         }
       }
     }
   }
   return returner;
+}
+
+// https://stackoverflow.com/questions/43099269/qsort-function-in-c-used-to-compare-an-array-of-strings
+int comparator(const void* p, const void* q){
+  char* a = *(char**)p;
+  char* b = *(char**)q;
+  return strcmp(a, b);
 }

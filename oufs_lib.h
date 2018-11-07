@@ -27,6 +27,7 @@ int oufs_find_open_bit(unsigned char value);
 // My own added functions
 int verify_parent_exists(char* path);
 int check_helper(INODE_REFERENCE parentInodeReference, char* name);
+int comparator(const void* p, const void* q);
 
 
 // PROJECT 4 ONLY
