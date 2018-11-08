@@ -190,10 +190,16 @@ int oufs_find_open_bit(unsigned char value){
 int oufs_mkdir(char* cwd, char* path){
 
   //Opens the target to create the new directory's absolute path
+  //If the path supplied is an absolute path, just that is used
   char fullPath[strlen(cwd) + strlen(path)];
   fullPath[0] = '\0';
-  strcat(fullPath, cwd);
-  strcat(fullPath, path);
+  if(path[0] == '/'){
+    strcat(fullPath, path);
+  }
+  else{
+    strcat(fullPath, cwd);
+    strcat(fullPath, path);
+  }
 
   //Gets the parent of the new directory's path by calling dirname on fullPath
   char dirnamePath[strlen(fullPath)];
@@ -314,10 +320,16 @@ int oufs_mkdir(char* cwd, char* path){
 int oufs_rmdir(char *cwd, char *path){
 
   //Creates the absolute path to the directory to be removed
+  //If the path supplied is an absolute path, just that is used
   char fullPath[strlen(cwd) + strlen(path)];
   fullPath[0] = '\0';
-  strcat(fullPath, cwd);
-  strcat(fullPath, path);
+  if(path[0] == '/'){
+    strcat(fullPath, path);
+  }
+  else{
+    strcat(fullPath, cwd);
+    strcat(fullPath, path);
+  }
 
   //If trying to remove root directory, throw error
   if(!strcmp(fullPath, "//")){ // '//' corresponds to root directory
@@ -435,8 +447,13 @@ int oufs_list(char *cwd, char *path){
   //Creates the full path to the target (directory whose children are listed)
   char fullPath[strlen(cwd) + strlen(path)];
   fullPath[0] = '\0';
-  strcat(fullPath, cwd);
-  strcat(fullPath, path);
+  if(path[0] == '/'){
+    strcat(fullPath, path);
+  }
+  else{
+    strcat(fullPath, cwd);
+    strcat(fullPath, path);
+  }
 
   //Gets the inode reference from the path, opens the inode, and stores in 'inode'
   INODE inode;
