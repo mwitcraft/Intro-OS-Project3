@@ -305,16 +305,18 @@ int oufs_rmdir(char *cwd, char *path){
   strcat(fullPath, cwd);
   strcat(fullPath, path);
 
-  int inodeToRemoveReference = verify_parent_exists(fullPath);
+  if(!strcmp(fullPath, "//")){
+    fprintf(stderr, "ERROR: cannot delete root directory\n");
+    return -1;
+  }
 
+  int inodeToRemoveReference = verify_parent_exists(fullPath);
   if(inodeToRemoveReference == -1){
     fprintf(stderr, "Path does not exist\n");
   }
   else{
-
     INODE inodeToRemove;
     oufs_read_inode_by_reference(inodeToRemoveReference, &inodeToRemove);
-
 
     if(inodeToRemove.size > 2){
       fprintf(stderr, "ERROR: Directory not empty\n");
