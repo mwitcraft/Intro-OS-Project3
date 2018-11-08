@@ -4,7 +4,12 @@
 #include "oufs_lib.h"
 
 int main(int argc, char** argv) {
-  if(vdisk_disk_open("vdisk1") != 0) {
+  // Get the key environment variables
+  char cwd[MAX_PATH_LENGTH];
+  char disk_name[MAX_PATH_LENGTH];
+  oufs_get_environment(cwd, disk_name);
+
+  if(vdisk_disk_open(disk_name) != 0) {
     return(-1);
   }
 
