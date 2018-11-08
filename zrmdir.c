@@ -16,14 +16,13 @@ int main(int argc, char** argv) {
 
     // Make the specified directory
     oufs_rmdir(cwd, argv[1]);
-    // verify_parent_exists(argv[2]);
 
     // Clean up
     vdisk_disk_close();
 
   }else{
     // Wrong number of parameters
-    fprintf(stderr, "Usage: zmkdir <dirname>\n");
+    fprintf(stderr, "Usage: zrmdir <dirname>\n");
   }
 
 }

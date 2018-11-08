@@ -25,8 +25,8 @@ BLOCK_REFERENCE oufs_allocate_new_block();
 int oufs_find_open_bit(unsigned char value);
 
 // My own added functions
-int verify_parent_exists(char* path);
-int check_helper(INODE_REFERENCE parentInodeReference, char* name);
+int get_inode_reference_from_path(char* path);
+int get_inode_reference_from_path_helper(INODE_REFERENCE parentInodeReference, char* name);
 int comparator(const void* p, const void* q);
 
 

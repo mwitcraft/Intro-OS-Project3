@@ -1,23 +1,17 @@
-// Write 0s to all the bytes in the virtual disk
-// Initialize master block
-//    -Mark master block, all inode blocks, and first data block (root directory) as allocated
-//    -Mark the first inode as allocated (root)
-// Initialize the first inode (root)
-// Initialize the first data block as an empty directory, but with '.' and '..' referring both to inode 0
-
 #include <stdio.h>
 #include <string.h>
 
 #include "oufs_lib.h"
 #include "vdisk.h"
 
+//Don't want to make a new header file because all of these functions are only used here
+//Functions used later on
 int initialize_disk();
 int initalize_master_block();
 int initialize_first_inode();
 int initialize_first_directory();
 
 int main(int argc, char** argv){
-
   //Write 0s to all bytes in virtual disk
   if(initialize_disk() == -1){
     fprintf(stderr, "ERROR WRITING 0s TO DISK");
@@ -37,9 +31,6 @@ int main(int argc, char** argv){
   if(initialize_first_directory() == -1){
     fprintf(stderr, "ERROR CREATING FIRST DATA BLOCK");
   }
-
-  putenv("ZPWD=/");
-  putenv("ZDISK=vdisk1");
 }
 
 int initialize_disk(){
@@ -96,6 +87,8 @@ int initialize_first_inode(){
     return 0;
 }
 
+// This function is basically the same as 'oufs_clean_directory_block', but it's working
+// and I do not want to change it.
 int initialize_first_directory(){
 
   //Creates the current directory
