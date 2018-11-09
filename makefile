@@ -10,4 +10,4 @@ mkdir:
 rmdir:
 	gcc zrmdir.c oufs_lib_support.c vdisk.c -o zrmdir 
 clean:
-	rm zformat zfilez zinspect zmkdir zrmdir vdisk1 
+	rm zformat zfilez zinspect zmkdir zrmdir

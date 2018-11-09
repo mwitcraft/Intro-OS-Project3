@@ -392,7 +392,7 @@ int oufs_rmdir(char *cwd, char *path){
         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){ //Step through the directory entries in the block
           int inodeRef = block.directory.entry[j].inode_reference;
           if(inodeRef == inodeToRemoveReference){ //if the inode referenced by a directory entry is the inode being removed...
-            strncpy(block.directory.entry[j].name, "", 1); //Empty the name in the data block
+            memset(block.directory.entry[j].name, 0, strlen(block.directory.entry[j].name)); //Empty the name in the data block
             block.directory.entry[j].inode_reference = UNALLOCATED_INODE; //Mark the inode as unallocated
             vdisk_write_block(ref, &block); //Write the block back to the disk
             parentBlock.inodes.inode[parentInodeBlockReference].data[ref] = UNALLOCATED_BLOCK;
@@ -419,8 +419,7 @@ int oufs_rmdir(char *cwd, char *path){
       if(dirBlockRef != UNALLOCATED_BLOCK){
         vdisk_read_block(dirBlockRef, &dirBlock);
         for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
-            // dirBlock.directory.entry[j].name = "";
-            strncpy(dirBlock.directory.entry[j].name, "", 1);
+            memset(dirBlock.directory.entry[j].name, 0, strlen(dirBlock.directory.entry[j].name)); //Empty the name in the data block
             dirBlock.directory.entry[j].inode_reference = 0;
         }
         vdisk_write_block(dirBlockRef, &dirBlock);
