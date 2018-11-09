@@ -233,6 +233,10 @@ int oufs_mkdir(char* cwd, char* path){
   int parentInodeBlockIndex = parentInodeReference % INODES_PER_BLOCK; //Gets where in the block the inode is
   BLOCK parentBlock;
   vdisk_read_block(parentInodeBlockReference, &parentBlock); //Open block
+  if(parentBlock.inodes.inode[parentInodeBlockIndex].size > 15){
+    fprintf(stderr, "ERROR: Block full\n");
+    return -1;
+  }
   ++parentBlock.inodes.inode[parentInodeBlockIndex].size; //Increments the block's size
   vdisk_write_block(parentInodeBlockReference, &parentBlock); //Writes the block back to the disk
 
