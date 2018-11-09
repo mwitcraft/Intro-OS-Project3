@@ -336,7 +336,7 @@ int oufs_rmdir(char *cwd, char *path){
   }
 
   //If trying to remove root directory, throw error
-  if(!strcmp(fullPath, "//")){ // '//' corresponds to root directory
+  if(!strcmp(fullPath, "//") || !strcmp(fullPath, "/")){
     fprintf(stderr, "ERROR: cannot delete root directory\n");
     return -1;
   }
